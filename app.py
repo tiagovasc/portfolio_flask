@@ -15,14 +15,12 @@ MY_API_KEY = os.getenv('RAILWAY_API', 'default_railway_api_key')
 app = Flask(__name__)
 CORS(app)  # Enables CORS for all domains and routes
 
-# Function to validate the API key
 def validate_api_key():
     api_key = request.headers.get('X-API-Key')
     if api_key != MY_API_KEY:
         logging.error('Invalid API Key provided.')
         abort(401, 'Invalid API Key')
 
-# Function to fetch raw data from Zerion API
 def fetch_raw_data():
     encoded_api_key = base64.b64encode(API_TOKEN.encode('utf-8')).decode('utf-8')
     headers = {
@@ -36,6 +34,26 @@ def fetch_raw_data():
         abort(response.status_code, f"Error fetching data from Zerion API: {response.text}")
     return response.json()
 
+def format_raw_api_data(data):
+    formatted_data = []
+    for item in data.get('data', []):
+        attributes = item.get('attributes', {})
+        fungible_info = attributes.get('fungible_info', {})
+        formatted_entry = {
+            'ticker': fungible_info.get('symbol', 'Unknown'),
+            'name': fungible_info.get('name', 'Unknown'),
+            'price': attributes.get('price', 'N/A'),
+            'usdValue': attributes.get('value', 'N/A'),
+            'quantity': attributes.get('quantity', {}).get('float', 'N/A')
+        }
+        formatted_data.append(formatted_entry)
+    return formatted_data
+
+def perform_computations(data):
+    token_details = [item for item in format_raw_api_data(data) if item['usdValue'] >= 1000]
+    total_vault_worth = sum(item['usdValue'] for item in token_details)
+    return token_details, total_vault_worth
+
 @app.route('/raw_api')
 def raw_api():
     validate_api_key()
@@ -47,9 +65,13 @@ def raw_api():
 def computed_api():
     validate_api_key()
     data = fetch_raw_data()
-    # Implement computation logic and return formatted results
+    computed_data, total_vault_worth = perform_computations(data)
+    result = {
+        'total_vault_worth': total_vault_worth,
+        'computed_data': computed_data
+    }
     logging.info('Computed API data prepared successfully.')
-    return jsonify(data)  # Placeholder, implement actual computation and formatting
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True)
