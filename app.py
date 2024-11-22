@@ -3,6 +3,10 @@ from flask_cors import CORS
 import os
 import base64
 import requests
+import logging
+
+# Setup basic configuration for logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Environment variables
 API_TOKEN = os.getenv('ZERION_API', 'default_zerion_api_token')
@@ -15,6 +19,7 @@ CORS(app)  # Enables CORS for all domains and routes
 def validate_api_key():
     api_key = request.headers.get('X-API-Key')
     if api_key != MY_API_KEY:
+        logging.error('Invalid API Key provided.')
         abort(401, 'Invalid API Key')
 
 # Function to fetch raw data from Zerion API
@@ -27,6 +32,7 @@ def fetch_raw_data():
     url = 'https://api.zerion.io/v1/wallets/0x1bdb97985913d699b0fbd1aacf96d1f855d9e1d0/positions/?filter[positions]=no_filter&currency=usd&filter[trash]=only_non_trash&sort=value'
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
+        logging.error(f"Failed to fetch data from Zerion API: Status Code: {response.status_code}, Response: {response.text}")
         abort(response.status_code, f"Error fetching data from Zerion API: {response.text}")
     return response.json()
 
@@ -34,6 +40,7 @@ def fetch_raw_data():
 def raw_api():
     validate_api_key()
     data = fetch_raw_data()
+    logging.info('Raw API data fetched successfully.')
     return jsonify(data)
 
 @app.route('/computed_api')
@@ -41,6 +48,7 @@ def computed_api():
     validate_api_key()
     data = fetch_raw_data()
     # Implement computation logic and return formatted results
+    logging.info('Computed API data prepared successfully.')
     return jsonify(data)  # Placeholder, implement actual computation and formatting
 
 if __name__ == '__main__':
