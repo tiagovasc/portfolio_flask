@@ -43,15 +43,15 @@ def format_raw_api_data(data):
             'ticker': fungible_info.get('symbol', 'Unknown'),
             'name': fungible_info.get('name', 'Unknown'),
             'price': attributes.get('price', 'N/A'),
-            'usdValue': attributes.get('value', 'N/A'),
+            'usdValue': attributes.get('value', None),
             'quantity': attributes.get('quantity', {}).get('float', 'N/A')
         }
         formatted_data.append(formatted_entry)
     return formatted_data
 
 def perform_computations(data):
-    token_details = [item for item in format_raw_api_data(data) if item['usdValue'] >= 1000]
-    total_vault_worth = sum(item['usdValue'] for item in token_details)
+    token_details = [item for item in format_raw_api_data(data) if item['usdValue'] is not None and item['usdValue'] >= 1000]
+    total_vault_worth = sum(item['usdValue'] for item in token_details if item['usdValue'] is not None)
     return token_details, total_vault_worth
 
 @app.route('/raw_api')
